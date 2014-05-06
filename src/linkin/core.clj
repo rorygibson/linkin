@@ -11,6 +11,11 @@
 (def base-url (atom ""))
 
 
+(defn local?
+  [url base-url]
+  (.startsWith url base-url))
+
+
 (defn crawl?
   [url already-crawled base-url]
 
@@ -18,8 +23,7 @@
         done (some #{url} already-crawled)
         done-similar (some #{similar-url} already-crawled)
         not-done (not (or done done-similar))
-        local (.startsWith url base-url)
-        result (and not-done local)]
+        result (and not-done (local? url base-url))]
     result))
 
 

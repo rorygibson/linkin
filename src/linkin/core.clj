@@ -26,7 +26,6 @@
 
 (def application (atom (initial-state)))
 (defn reset-application! [] (swap! application initial-state))
-
 (defn crawled-urls [] (:crawled-urls @application))
 (defn link-agent [] (:link-agent @application))
 (defn handler-agent [] (:handler-agent @application))
@@ -48,11 +47,13 @@
 
          
 (defn local?
+  "Determine if a URL is local relative to a certain base URL"
   [url base-url]
   (.startsWith url base-url))
 
 
 (defn already-crawled?
+  "Check if we have already crawled this URL or a similar URL (<url> + '#')"
   [url crawled-urls]
   (let [similar-url (str url "#")
         done (some #{url} crawled-urls)
@@ -61,6 +62,7 @@
 
 
 (defn crawl?
+  "We should ony crawl a URL if it's local and we haven't already crawled it (or a similar URL)"
   [url already-crawled base-url]
 
   (let [done (already-crawled? url already-crawled)
@@ -69,13 +71,14 @@
 
 
 (defn simple-body-parser
+  "Simplest possible body parser; prints out URL content type and length of body, for HTML documents"
   [url content-type body]
   (if (= content-type TEXT-HTML)
     (debug "[simple-body-parser] got [" url "] of type [" content-type "] with " (count body) " bytes data")))
 
 
 (defn extract-anchors
-  "Uses JSoup magic to extract anchor tags"
+  "Uses JSoup magic to extract anchor tags from HTML"
   [body ^String content-type ^String base-uri]
   (if (= content-type TEXT-HTML)
     (let [body (if (nil? body) "" body)
@@ -88,7 +91,7 @@
 
 (defn response-handler
   "Called as a callback by the HTTP-Kit fetcher.
-   Obtains and enqueues for processing the anchors and full body text from the response"
+   Obtains and enqueues for processing the anchors and body text from the response"
   [body-parser url {:keys [status headers body error opts] :as resp}]
 
   (if (crawl? url (crawled-urls) (base-url))
@@ -106,7 +109,7 @@
 
 
 (defn crawl
-  "Start crawling at the given URL"
+  "Start crawling at the given base URL"
   [url body-parser]
   (set-base-url url)
   

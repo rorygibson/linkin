@@ -1,7 +1,13 @@
 # linkin
 
-A minimal Clojure web crawling library built atop [http-kit](http://http-kit.org) for asynchronicity & concurrency, and [Jsoup](http://jsoup.org) for HTML parsing.
-("linkin" from Linkin Park's ["Crawling"](http://www.azlyrics.com/lyrics/linkinpark/crawling.html), and because links)
+A minimal Clojure web crawling library built atop
+[http-kit](http://http-kit.org) for asynchronicity & concurrency, and
+[Jsoup](http://jsoup.org) for HTML parsing.
+
+("linkin" from Linkin Park's
+["Crawling"](http://www.azlyrics.com/lyrics/linkinpark/crawling.html),
+and because links)
+
 
 
 ## Usage

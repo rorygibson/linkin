@@ -42,4 +42,4 @@ Then:
 
 Copyright © 2014 Rory Gibson
 
-Distributed under the [Eclipse Public License either version 1.0.](http://www.eclipse.org/legal/epl-v10.html)
+Distributed under the [Eclipse Public License version 1.0.](http://www.eclipse.org/legal/epl-v10.html)

@@ -16,15 +16,20 @@
   (.startsWith url base-url))
 
 
+(defn already-crawled?
+  [url crawled-urls]
+  (let [similar-url (str url "#")
+        done (some #{url} crawled-urls)
+        done-similar (some #{similar-url} crawled-urls)]
+    (or done done-similar)))
+
+
 (defn crawl?
   [url already-crawled base-url]
 
-  (let [similar-url (str url "#")
-        done (some #{url} already-crawled)
-        done-similar (some #{similar-url} already-crawled)
-        not-done (not (or done done-similar))
-        result (and not-done (local? url base-url))]
-    result))
+  (let [done (already-crawled? url already-crawled)
+        local (local? url base-url)]
+    (and (not done) local)))
 
 
 (defn simple-body-parser

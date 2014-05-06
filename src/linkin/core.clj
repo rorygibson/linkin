@@ -5,18 +5,11 @@
            [org.jsoup.nodes Document]))
 
 
-;;
-;; Constants
-;; 
-
 (def TEXT-HTML "text/html")
 
 
-;;
-;; State
-;;
-
 (defn initial-state
+  "Define initial state var"
   []
   { :crawled-urls #{}
     :link-agent (agent "")
@@ -25,25 +18,48 @@
 
 
 (def application (atom (initial-state)))
-(defn reset-application! [] (swap! application initial-state))
-(defn crawled-urls [] (:crawled-urls @application))
-(defn link-agent [] (:link-agent @application))
-(defn handler-agent [] (:handler-agent @application))
-(defn base-url [] (:base-url @application))
+
+
+(defn reset-application!
+  "Return to starting state"
+  []
+  (swap! application (fn [_] (initial-state))))
+
+
+(defn crawled-urls
+  "List out URLs crawled so far (since last reset-application!)"
+  []
+  (:crawled-urls @application))
+
+
+(defn link-agent
+  "Return reference ti agent for queueing fresh links"
+  []
+  (:link-agent @application))
+
+
+(defn handler-agent
+  "Return referece to agent for queueing body parsing"
+  []
+  (:handler-agent @application))
+
+
+(defn base-url
+  "Get the base url for this crawl"
+  []
+  (:base-url @application))
 
 
 (defn mark-as-crawled
+  "Indicates that we have already crawled a specific URL"
   [url]
   (swap! application (fn [app] (assoc app :crawled-urls (conj (:crawled-urls app) url)))))
 
 
 (defn set-base-url
+  "Sets the base URL for a crawl"
   [u]
   (swap! application assoc :base-url u))
-
-
-
-
 
          
 (defn local?

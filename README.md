@@ -28,6 +28,7 @@ Then:
 
 ## Todo
 + Respect robots.txt
++ Throttling (ie don't DoS target sites...)
 + Control of max depth / number of pages crawled
 + Ability to spider across domains
 + Pass options through to http-kit (eg following redirects)

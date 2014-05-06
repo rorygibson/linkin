@@ -12,13 +12,13 @@
 
 
 (defn crawl?
-  [url]
+  [url already-crawled base-url]
 
   (let [similar-url (str url "#")
-        done (some #{url} @crawled-urls)
-        done-similar (some #{similar-url} @crawled-urls)
+        done (some #{url} already-crawled)
+        done-similar (some #{similar-url} already-crawled)
         not-done (not (or done done-similar))
-        local (.startsWith url @base-url)
+        local (.startsWith url base-url)
         result (and not-done local)]
     result))
 
@@ -51,7 +51,7 @@
    Obtains and enqueues for processing the anchors and full body text from the response"
   [body-parser url {:keys [status headers body error opts] :as resp}]
 
-  (if (crawl? url)
+  (if (crawl? url @crawled-urls @base-url)
 
     (let [content-type (:content-type headers)
           anchors (extract-anchors body content-type url)]
@@ -59,7 +59,7 @@
       (trace "[response-handler] got" url content-type)
         
       (doseq [link anchors]      
-        (if (crawl? link)
+        (if (crawl? link @crawled-urls @base-url)
           (send link-agent (fn [_] (http/get link (partial response-handler body-parser link))))))
 
       (send handler-agent (fn [_] (body-parser url content-type body))))))

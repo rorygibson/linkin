@@ -15,7 +15,7 @@ Then:
 ```clojure
 (require 'linkin.core)
 (defn my-handler [url body] (println "URL [" url "Body [" body "]"))
-(crawl "http://www.example.com" #(prn %1 %2))
+(linkin.core/crawl "http://www.example.com" #(prn %1 %2))
 ```
 
 ## License

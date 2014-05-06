@@ -28,12 +28,15 @@ Then:
 
 ## Todo
 + Respect robots.txt
-+ Control of max depth
++ Control of max depth / number of pages crawled
 + Ability to spider across domains
++ Pass options through to http-kit (eg following redirects)
 + Filtering by content type
 + Stats while running
 + Namespace state by run (currently shares state so can't run multiple instances alongside)
-+ Look at using a crawl queue instead of the link-agent
++ Look at using a crawl set / queue instead of the link-agent - to prevent duplication of crawled pages
++ Better URL normalization (for detecting URLs we've seen before) - see http://en.wikipedia.org/wiki/URL_normalization
+
 
 ## License
 

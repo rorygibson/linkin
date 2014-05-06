@@ -11,8 +11,12 @@ and because links)
 
 
 ## Usage
+Right now it's not on [clojars](http://clojars.org) yet, so you'll
+need to build and install it locally using a method of your own choosing
+([lein-localrepo](https://github.com/kumarshantanu/lein-localrepo)
+is a good choice)
 
-Include the following dependency in your project.clj:
+Then include the following dependency in your project.clj:
 ```clojure
 [linkin "0.1.0-SNAPSHOT"]
 ```

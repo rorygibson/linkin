@@ -9,7 +9,6 @@ A minimal Clojure web crawling library built atop
 and because links)
 
 
-
 ## Usage
 Right now it's not on [clojars](http://clojars.org) yet, so you'll
 need to build and install it locally using a method of your own choosing
@@ -26,6 +25,15 @@ Then:
 (require 'linkin.core)
 (linkin.core/crawl "http://example.com" linkin.core/simple-body-parser)
 ```
+
+## Todo
++ Respect robots.txt
++ Control of max depth
++ Ability to spider across domains
++ Filtering by content type
++ Stats while running
++ Namespace state by run (currently shares state so can't run multiple instances alongside)
++ Look at using a crawl queue instead of the link-agent
 
 ## License
 

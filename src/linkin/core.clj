@@ -131,4 +131,5 @@
   
   (info "[crawl] Starting crawl of" (base-url))
 
-  (http/get url {} (partial response-handler body-parser (base-url))))
+  (http/get url {} (partial response-handler body-parser (base-url)))
+  nil)

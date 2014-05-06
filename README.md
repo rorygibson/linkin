@@ -24,8 +24,7 @@ Then include the following dependency in your project.clj:
 Then:
 ```clojure
 (require 'linkin.core)
-(defn my-handler [url body] (println "URL [" url "Body [" body "]"))
-(linkin.core/crawl "http://www.example.com" #(prn %1 %2))
+(linkin.core/crawl "http://example.com" linkin.core/simple-body-parser)
 ```
 
 ## License

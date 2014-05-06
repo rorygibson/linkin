@@ -2,7 +2,7 @@
   (:require [org.httpkit.client :as http]
             [clojure.tools.logging :refer [debug info error warn trace]])
   (:import [org.jsoup Jsoup]
-           [org.jsoup.nodes Document]))
+           [org.jsoup.nodes Document Node]))
 
 
 (def TEXT-HTML "text/html")
@@ -64,13 +64,13 @@
          
 (defn local?
   "Determine if a URL is local relative to a certain base URL"
-  [url base-url]
+  [^String url ^String base-url]
   (.startsWith url base-url))
 
 
 (defn already-crawled?
   "Check if we have already crawled this URL or a similar URL (<url> + '#')"
-  [url crawled-urls]
+  [^String url crawled-urls]
   (let [similar-url (str url "#")
         done (some #{url} crawled-urls)
         done-similar (some #{similar-url} crawled-urls)]
@@ -79,7 +79,7 @@
 
 (defn crawl?
   "We should ony crawl a URL if it's local and we haven't already crawled it (or a similar URL)"
-  [url already-crawled base-url]
+  [^String url already-crawled ^String base-url]
 
   (let [done (already-crawled? url already-crawled)
         local (local? url base-url)]
@@ -88,7 +88,7 @@
 
 (defn simple-body-parser
   "Simplest possible body parser; prints out URL content type and length of body, for HTML documents"
-  [url content-type body]
+  [^String url ^String content-type body]
   (if (= content-type TEXT-HTML)
     (debug "[simple-body-parser] got [" url "] of type [" content-type "] with " (count body) " bytes data")))
 
@@ -101,14 +101,14 @@
           doc (Jsoup/parse body)
           doc (doto doc (.setBaseUri base-uri))
           anchors (.select doc "a")]
-      (map #(.attr % "abs:href") anchors))
+      (map (fn [^org.jsoup.nodes.Node a] (.attr a "abs:href")) anchors))
     []))
 
 
 (defn response-handler
   "Called as a callback by the HTTP-Kit fetcher.
    Obtains and enqueues for processing the anchors and body text from the response"
-  [body-parser url {:keys [status headers body error opts] :as resp}]
+  [body-parser ^String url {:keys [status headers body error opts] :as resp}]
 
   (if (crawl? url (crawled-urls) (base-url))
 
@@ -126,7 +126,7 @@
 
 (defn crawl
   "Start crawling at the given base URL"
-  [url body-parser]
+  [^String url body-parser]
   (set-base-url url)
   
   (info "[crawl] Starting crawl of" (base-url))

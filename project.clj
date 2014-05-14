@@ -10,6 +10,7 @@
 
   :dependencies [[org.clojure/clojure "1.6.0"]
                  [http-kit "2.1.18"]
+                 [irobot/irobot "0.1.0-SNAPSHOT"]
                  [org.jsoup/jsoup "1.7.3"]
                  [log4j "1.2.17"]
                  [org.clojure/tools.logging "0.2.6"]]

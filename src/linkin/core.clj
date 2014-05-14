@@ -1,11 +1,13 @@
 (ns linkin.core
-  (:require [org.httpkit.client :as http]
+  (:require [irobot.core]
+            [org.httpkit.client :as http]
             [clojure.tools.logging :refer [debug info error warn trace]])
   (:import [org.jsoup Jsoup]
            [org.jsoup.nodes Document Node]))
 
 
 (def TEXT-HTML "text/html")
+(def USER_AGENT "irobot 0.1.0")
 
 
 (defn initial-state
@@ -77,13 +79,20 @@
     (or done done-similar)))
 
 
+(defn relativize-url
+  [url]
+  (str "/" (clojure.string/join "/" (drop 2 (filter (comp not empty?) (clojure.string/split url #"/"))))))
+
+
 (defn crawl?
   "We should ony crawl a URL if it's local and we haven't already crawled it (or a similar URL)"
-  [^String url already-crawled ^String base-url]
+  [^String url robots already-crawled ^String base-url]
 
-  (let [done (already-crawled? url already-crawled)
+  (let [relative-url (relativize-url url)
+        allowed (irobot.core/allows? robots USER_AGENT relative-url)
+        done (already-crawled? url already-crawled)
         local (local? url base-url)]
-    (and (not done) local)))
+    (and (not done) local allowed)))
 
 
 (defn simple-body-parser
@@ -108,9 +117,9 @@
 (defn response-handler
   "Called as a callback by the HTTP-Kit fetcher.
    Obtains and enqueues for processing the anchors and body text from the response"
-  [body-parser ^String url {:keys [status headers body error opts] :as resp}]
+  [robots body-parser ^String url {:keys [status headers body error opts] :as resp}]
 
-  (if (crawl? url (crawled-urls) (base-url))
+  (if (crawl? url robots (crawled-urls) (base-url))
 
     (let [content-type (:content-type headers)
           anchors (extract-anchors body content-type url)]
@@ -118,10 +127,17 @@
       (trace "[response-handler] got" url content-type)
         
       (doseq [link anchors]      
-        (if (crawl? link (crawled-urls) (base-url))
-          (send (link-agent) (fn [_] (http/get link (partial response-handler body-parser link))))))
+        (if (crawl? link robots (crawled-urls) (base-url))
+          (send (link-agent) (fn [_] (http/get link (partial response-handler robots body-parser link))))))
 
       (send (handler-agent) (fn [_] (body-parser url content-type body))))))
+
+
+(defn get-robots-txt
+  [base-url]
+  (let [url (str base-url "/robots.txt")]
+    (info "[get-robots-txt] Requesting robots rules from" url)
+    (:body @(http/get url))))
 
 
 (defn crawl
@@ -131,5 +147,10 @@
   
   (info "[crawl] Starting crawl of" (base-url))
 
-  (http/get url {} (partial response-handler body-parser (base-url)))
-  nil)
+  (let [robots-txt (get-robots-txt url)
+        robots (irobot.core/robots robots-txt)]
+    (info "[crawl] Robots content:" robots)
+    (if (crawl? url robots (crawled-urls) url)
+      (http/get url {} (partial response-handler robots body-parser url))
+      "Not crawling - base URL not allowed")
+    "Crawl started"))

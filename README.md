@@ -1,12 +1,18 @@
 # linkin
 
-A minimal Clojure web crawling library built atop
-[http-kit](http://http-kit.org) for asynchronicity & concurrency, and
-[Jsoup](http://jsoup.org) for HTML parsing.
+A minimal, async Clojure web crawling library.
 
 ("linkin" from Linkin Park's
 ["Crawling"](http://www.azlyrics.com/lyrics/linkinpark/crawling.html),
 and because links)
+
+## Features
++ Uses http-kit for async fetching
++ Uses Jsoup to reliably extract links from scraped pages
++ Allows the user to pass in their own function to handle the body content of scraped pages
++ Respects the robots.txt of the target website (allow & disallow rules)
+
+
 
 
 ## Usage
@@ -27,8 +33,8 @@ Then:
 ```
 
 ## Todo
-+ Respect robots.txt
 + Throttling (ie don't DoS target sites...)
++ Control throttling using the spider delay directives in robots.txt
 + Control of max depth / number of pages crawled
 + Ability to spider across domains
 + Pass options through to http-kit (eg following redirects)

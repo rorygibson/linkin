@@ -176,7 +176,7 @@
     
     (let [found (find-urls body)]
       (debug "[sitemap-handler] got" (count found) "URLs")      
-      (doall (map record-url-from-sitemap found))
+      (doall (map record-url-from-sitemap found))      
       (debug "[sitemap-handler] total count is" (count (urls-from-sitemaps))))))
 
 
@@ -184,7 +184,6 @@
   "Starting from a base sitemap.xml URL, locate and parse all sitemaps and sitemapindexes
 to produce a list of target URLs"
   [sitemap-url]
-
   (http/get sitemap-url {} (partial sitemap-handler sitemap-url)))
 
 
@@ -197,10 +196,8 @@ to produce a list of target URLs"
 
   (let [robots-txt (get-robots-txt url)
         robots (irobot.core/robots robots-txt)]
-    (info "[crawl] Robots content:" robots)
+        
     (if (crawl? url robots (crawled-urls) url)
       (http/get url {} (partial response-handler robots body-parser url))
       "Not crawling - base URL not allowed")
     "Crawl started"))
-
-

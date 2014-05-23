@@ -1,5 +1,6 @@
 (ns linkin.core
   (:require [irobot.core]
+            [mundi.core :refer :all]
             [org.httpkit.client :as http]
             [clojure.tools.logging :refer [debug info error warn trace]])
   (:import [org.jsoup Jsoup]
@@ -14,6 +15,7 @@
   "Define initial state var"
   []
   { :crawled-urls #{}
+    :urls-from-sitemaps #{}
     :link-agent (agent "")
     :handler-agent (agent "")
     :base-url ""})
@@ -32,6 +34,12 @@
   "List out URLs crawled so far (since last reset-application!)"
   []
   (:crawled-urls @application))
+
+
+(defn urls-from-sitemaps
+  "List out URLs retrieved from a sitemap crawl"
+  []
+  (:urls-from-sitemaps @application))
 
 
 (defn link-agent
@@ -56,6 +64,11 @@
   "Indicates that we have already crawled a specific URL"
   [url]
   (swap! application (fn [app] (assoc app :crawled-urls (conj (:crawled-urls app) url)))))
+
+
+(defn record-url-from-sitemap
+  [url]
+  (swap! application (fn [app] (assoc app :urls-from-sitemaps (conj (:urls-from-sitemaps app) url)))))
 
 
 (defn set-base-url
@@ -138,6 +151,41 @@
   (let [url (str base-url "/robots.txt")]
     (info "[get-robots-txt] Requesting robots rules from" url)
     (:body @(http/get url))))
+
+
+(defn sitemap-handler
+  "Request handler for responses to sitemap requests"
+  [^String url {:keys [status headers body error opts] :as resp}]
+  (mark-as-crawled url)
+
+  (debug "[sitemap-handler] got" url)
+  
+  (if (and body (sitemap-index? body))
+    (let [locs (find-sitemaps body)]
+      (debug "[sitemap-handler] got" (count locs) "sitemap locs")
+
+      (doall
+       (map
+        (fn [l]
+          (debug "[sitemap-handler] processing" l)
+          (send (link-agent)
+                (fn [_]
+                  (debug "[sitemap-handler] agent called with sitemap loc" l)
+                  (http/get (:loc l) (partial sitemap-handler (:loc l))))))
+        locs)))
+    
+    (let [found (find-urls body)]
+      (debug "[sitemap-handler] got" (count found) "URLs")      
+      (doall (map record-url-from-sitemap found))
+      (debug "[sitemap-handler] total count is" (count (urls-from-sitemaps))))))
+
+
+(defn crawl-sitemaps
+  "Starting from a base sitemap.xml URL, locate and parse all sitemaps and sitemapindexes
+to produce a list of target URLs"
+  [sitemap-url]
+
+  (http/get sitemap-url {} (partial sitemap-handler sitemap-url)))
 
 
 (defn crawl

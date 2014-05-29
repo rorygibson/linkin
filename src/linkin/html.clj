@@ -3,7 +3,7 @@
              [org.jsoup.nodes Document Node]))
 
 
-(def TEXT-HTML "text/html")
+(def ^{:private true} TEXT-HTML "text/html")
 
 
 (defn extract-anchors

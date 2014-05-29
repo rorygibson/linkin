@@ -1,6 +1,8 @@
 (ns linkin.core
   (:require [irobot.core]
             [linkin.urls :refer :all]
+            [linkin.html :refer :all]
+            [linkin.parsers :refer :all] 
             [mundi.core :refer :all]
             [org.httpkit.client :as http]
             [clojure.tools.logging :refer [debug info error warn trace]]))
@@ -87,14 +89,6 @@
         done (already-crawled? url already-crawled)
         local (local? url base-url)]
     (and (not done) local allowed)))
-
-
-(defn simple-body-parser
-  "Simplest possible body parser; prints out URL content type and length of body, for HTML documents"
-  [^String url ^String content-type body]
-  (if (= content-type TEXT-HTML)
-    (debug "[simple-body-parser] got [" url "] of type [" content-type "] with " (count body) " bytes data")))
-
 
 
 (defn response-handler

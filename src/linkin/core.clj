@@ -1,5 +1,6 @@
 (ns linkin.core
   (:require [irobot.core]
+            [linkin.urls :refer :all]
             [mundi.core :refer :all]
             [org.httpkit.client :as http]
             [clojure.tools.logging :refer [debug info error warn trace]])
@@ -76,25 +77,7 @@
   [u]
   (swap! application assoc :base-url u))
 
-         
-(defn local?
-  "Determine if a URL is local relative to a certain base URL"
-  [^String url ^String base-url]
-  (.startsWith url base-url))
 
-
-(defn already-crawled?
-  "Check if we have already crawled this URL or a similar URL (<url> + '#')"
-  [^String url crawled-urls]
-  (let [similar-url (str url "#")
-        done (some #{url} crawled-urls)
-        done-similar (some #{similar-url} crawled-urls)]
-    (or done done-similar)))
-
-
-(defn relativize-url
-  [url]
-  (str "/" (clojure.string/join "/" (drop 2 (filter (comp not empty?) (clojure.string/split url #"/"))))))
 
 
 (defn crawl?

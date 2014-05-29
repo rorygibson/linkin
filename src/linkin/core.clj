@@ -3,12 +3,10 @@
             [linkin.urls :refer :all]
             [mundi.core :refer :all]
             [org.httpkit.client :as http]
-            [clojure.tools.logging :refer [debug info error warn trace]])
-  (:import [org.jsoup Jsoup]
-           [org.jsoup.nodes Document Node]))
+            [clojure.tools.logging :refer [debug info error warn trace]]))
 
 
-(def TEXT-HTML "text/html")
+
 (def USER_AGENT "irobot 0.1.0")
 
 
@@ -97,17 +95,6 @@
   (if (= content-type TEXT-HTML)
     (debug "[simple-body-parser] got [" url "] of type [" content-type "] with " (count body) " bytes data")))
 
-
-(defn extract-anchors
-  "Uses JSoup magic to extract anchor tags from HTML"
-  [body ^String content-type ^String base-uri]
-  (if (= content-type TEXT-HTML)
-    (let [body (if (nil? body) "" body)
-          doc (Jsoup/parse body)
-          doc (doto doc (.setBaseUri base-uri))
-          anchors (.select doc "a")]
-      (map (fn [^org.jsoup.nodes.Node a] (.attr a "abs:href")) anchors))
-    []))
 
 
 (defn response-handler

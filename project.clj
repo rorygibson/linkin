@@ -9,6 +9,7 @@
   :main linkin.core
 
   :dependencies [[org.clojure/clojure "1.6.0"]
+                 [org.clojure/core.async "0.1.303.0-886421-alpha"]
                  [http-kit "2.1.18"]
                  [irobot/irobot "0.1.1-SNAPSHOT"]
                  [mundi "0.1.0-SNAPSHOT"]

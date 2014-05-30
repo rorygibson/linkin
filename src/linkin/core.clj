@@ -15,9 +15,9 @@
 (defn initial-state
   "Define initial state var"
   ([]
-  { :crawled-urls #{}
-   :urls-from-sitemaps #{}
-   :base-url ""})
+     { :crawled-urls #{}
+      :urls-from-sitemaps #{}
+      :base-url ""})
   ([_] (initial-state)))
 
 
@@ -83,13 +83,14 @@
 
 
 (defn do-get
-  "If we should fetch a resource, asynchronously retrieve and pass it to response-handler"
+  "If we should fetch a resource, asynchronously retrieve and pass it to response-handler, and mark it as having been crawled"
   [robots body-consumer url]
-  (if (crawl? url robots (crawled-urls) (base-url))
-    (go (->> url
-             http-get
-             <!
-             (response-handler robots body-consumer)))))
+  (if (crawl? url robots (crawled-urls) (base-url))    
+    (do (mark-as-crawled url)    
+        (go (->> url
+                 http-get
+                 <!
+                 (response-handler robots body-consumer))))))
 
 
 (defn response-handler
@@ -99,8 +100,6 @@
   (let [urls (extract-anchors body content-type url)]
 
     (debug "[response-handler] got [" url "] of type [" content-type "] containing " (count urls) "URLs")
-    
-    (mark-as-crawled url)
     
     (doseq [u urls]
       (do-get robots body-consumer u))
@@ -157,10 +156,10 @@ Assumes that the channel will contain messages, each of which is a map of those 
     (go (loop []
           (when-let [v (<! c)]
             (let [body (:body v)
-                     url (:url v)
-                     content-type (:content-type v)]
-            (body-parser url content-type body)
-            (recur)))))
+                  url (:url v)
+                  content-type (:content-type v)]
+              (body-parser url content-type body)
+              (recur)))))
     c))
 
 

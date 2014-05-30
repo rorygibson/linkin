@@ -72,33 +72,45 @@
     (go (:body (<! (http-get url))))))
 
 
-(declare do-get)
+(defn consume
+  "Take in URL, content-type and body. Package & enqueue on a channel for processing."
+  [consumer {:keys [opts headers body] :as resp}]
+  (let [content-type (:content-type headers)
+        url (:url opts)]
+    (go
+     (>! consumer {:url url :content-type content-type :body body}))))
+
+
+(declare response-handler)
+
+
+(defn do-get
+  [robots body-consumer url]
+  (if (crawl? url robots (crawled-urls) (base-url))
+    (go (->> url
+             http-get
+             <!
+             (response-handler robots body-consumer url)))))
 
 
 (defn response-handler
   "Called as a callback by the HTTP-Kit fetcher.
    Obtains and enqueues for processing the anchors and body text from the response"
-  [robots body-parser ^String url {:keys [status headers body error opts] :as resp}]
+  [robots body-consumer ^String url {:keys [headers body] :as resp}]
   (let [content-type (:content-type headers)
         urls (extract-anchors body content-type url)]
 
     (debug "[response-handler] got [" url "] of type [" content-type "] containing " (count urls) "URLs")
+    
     (mark-as-crawled url)
     
-    (doseq [url urls]
-      (do-get robots body-parser url))
+    (doseq [u urls]
+      (do-get robots body-consumer u))
 
-    (go body-parser url content-type body)))
+    (consume body-consumer resp)))
 
 
 
-(defn do-get
-  [robots body-parser url]
-  (if (crawl? url robots (crawled-urls) (base-url))
-    (go (->> url
-             http-get
-             <!
-             (response-handler robots body-parser url)))))
 
 
 ;; (defn sitemap-handler
@@ -138,6 +150,22 @@
 ;;           (sitemap-handler sitemap-url))))
 
 
+(defn make-body-consumer
+  "Sets up a channel, and binds a body-parsing function to it.
+Assumes that the body-parser takes a URL, content-type and body (all Strings).
+Assumes that the channel will contain messages, each of which is a map of those 3 elements."
+  [body-parser]
+  (let [c (chan)]
+    (go (loop []
+          (when-let [v (<! c)]
+            (let [body (:body v)
+                     url (:url v)
+                     content-type (:content-type v)]
+            (body-parser url content-type body)
+            (recur)))))
+    c))
+
+
 (defn crawl
   "Start crawling at the given base URL"
   [^String url body-parser]
@@ -146,7 +174,8 @@
   (info "[crawl] Starting crawl of" (base-url))
 
   (let [robots-txt (get-robots-txt url)
-        robots (irobot.core/robots (<!! robots-txt))]
+        robots (irobot.core/robots (<!! robots-txt))
+        body-consumer (make-body-consumer body-parser)]
 
-    (do-get robots body-parser url)
+    (do-get robots body-consumer url)
     "Crawl started"))

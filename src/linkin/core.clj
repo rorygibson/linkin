@@ -85,6 +85,7 @@
 
 
 (defn do-get
+  "If we should fetch a resource, asynchronously retrieve and pass it to response-handler"
   [robots body-consumer url]
   (if (crawl? url robots (crawled-urls) (base-url))
     (go (->> url
@@ -94,8 +95,7 @@
 
 
 (defn response-handler
-  "Called as a callback by the HTTP-Kit fetcher.
-   Obtains and enqueues for processing the anchors and body text from the response"
+  "Taking in an HTTP response, extract anchors from the body, kick off fetches on those URLs, then consume the body (enqueue the body for further processing)"
   [robots body-consumer ^String url {:keys [headers body] :as resp}]
   (let [content-type (:content-type headers)
         urls (extract-anchors body content-type url)]

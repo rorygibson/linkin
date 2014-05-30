@@ -14,12 +14,11 @@
 
 (defn initial-state
   "Define initial state var"
-  []
+  ([]
   { :crawled-urls #{}
-    :urls-from-sitemaps #{}
-    :link-agent (agent "")
-    :handler-agent (agent "")
-    :base-url ""})
+   :urls-from-sitemaps #{}
+   :base-url ""})
+  ([_] (initial-state)))
 
 
 (def application (atom (initial-state)))
@@ -28,7 +27,7 @@
 (defn reset-application!
   "Return to starting state"
   []
-  (swap! application (fn [_] (initial-state))))
+  (swap! application initial-state))
 
 
 (defn crawled-urls
@@ -41,18 +40,6 @@
   "List out URLs retrieved from a sitemap crawl"
   []
   (:urls-from-sitemaps @application))
-
-
-(defn link-agent
-  "Return reference ti agent for queueing fresh links"
-  []
-  (:link-agent @application))
-
-
-(defn handler-agent
-  "Return referece to agent for queueing body parsing"
-  []
-  (:handler-agent @application))
 
 
 (defn base-url
@@ -78,24 +65,6 @@
   (swap! application assoc :base-url u))
 
 
-
-
-(defn response-handler
-  "Called as a callback by the HTTP-Kit fetcher.
-   Obtains and enqueues for processing the anchors and body text from the response"
-  [robots body-parser ^String url {:keys [status headers body error opts] :as resp}]
-  (let [content-type (:content-type headers)
-        anchors (extract-anchors body content-type url)]
-    (mark-as-crawled url)
-    (debug "[response-handler] got [" url "] of type [" content-type "] containing " (count anchors) "URLs")
-    
-    (doseq [link anchors]      
-      (if (crawl? link robots (crawled-urls) (base-url))
-        (send (link-agent) (fn [_] (http/get link (partial response-handler robots body-parser link))))))
-
-    (send (handler-agent) (fn [_] (body-parser url content-type body)))))
-
-
 (defn get-robots-txt
   [base-url]
   (let [url (str base-url "/robots.txt")]
@@ -103,41 +72,70 @@
     (go (:body (<! (http-get url))))))
 
 
-(defn sitemap-handler
-  "Request handler for responses to sitemap requests"
-  [^String url {:keys [status headers body error opts] :as resp}]
-  (mark-as-crawled url)
+(declare do-get)
 
-  (debug "[sitemap-handler] got" url)
-  
-  (if (and body (sitemap-index? body))
-    (let [locs (find-sitemaps body)]
-      (debug "[sitemap-handler] got" (count locs) "sitemap locs")
 
-      (doall
-       (map
-        (fn [l]
-          (debug "[sitemap-handler] processing" l)
-          (send (link-agent)
-                (fn [_]
-                  (debug "[sitemap-handler] agent called with sitemap loc" l)
-                  (http/get (:loc l) (partial sitemap-handler (:loc l))))))
-        locs)))
+(defn response-handler
+  "Called as a callback by the HTTP-Kit fetcher.
+   Obtains and enqueues for processing the anchors and body text from the response"
+  [robots body-parser ^String url {:keys [status headers body error opts] :as resp}]
+  (let [content-type (:content-type headers)
+        urls (extract-anchors body content-type url)]
+
+    (debug "[response-handler] got [" url "] of type [" content-type "] containing " (count urls) "URLs")
+    (mark-as-crawled url)
     
-    (let [found (find-urls body)]
-      (debug "[sitemap-handler] got" (count found) "URLs")      
-      (doall (map record-url-from-sitemap found))      
-      (debug "[sitemap-handler] total count is" (count (urls-from-sitemaps))))))
+    (doseq [url urls]
+      (do-get robots body-parser url))
+
+    (go body-parser url content-type body)))
 
 
-(defn crawl-sitemaps
-  "Starting from a base sitemap.xml URL, locate and parse all sitemaps and sitemapindexes
-to produce a list of target URLs"
-  [sitemap-url]
-  (go (->> sitemap-url          
-           http-get
-           <!
-          (sitemap-handler sitemap-url))))
+
+(defn do-get
+  [robots body-parser url]
+  (if (crawl? url robots (crawled-urls) (base-url))
+    (go (->> url
+             http-get
+             <!
+             (response-handler robots body-parser url)))))
+
+
+;; (defn sitemap-handler
+;;   "Request handler for responses to sitemap requests"
+;;   [^String url {:keys [status headers body error opts] :as resp}]
+;;   (mark-as-crawled url)
+
+;;   (debug "[sitemap-handler] got" url)
+
+;;   (if (and body (sitemap-index? body))
+;;     (let [locs (find-sitemaps body)]
+;;       (debug "[sitemap-handler] got" (count locs) "sitemap locs")
+
+;;       (doall
+;;        (map
+;;         (fn [l]
+;;           (debug "[sitemap-handler] processing" l)
+;;           (send (link-agent)
+;;                 (fn [_]
+;;                   (debug "[sitemap-handler] agent called with sitemap loc" l)
+;;                   (http/get (:loc l) (partial sitemap-handler (:loc l))))))
+;;         locs)))
+
+;;     (let [found (find-urls body)]
+;;       (debug "[sitemap-handler] got" (count found) "URLs")      
+;;       (doall (map record-url-from-sitemap found))      
+;;       (debug "[sitemap-handler] total count is" (count (urls-from-sitemaps))))))
+
+
+;; (defn crawl-sitemaps
+;;   "Starting from a base sitemap.xml URL, locate and parse all sitemaps and sitemapindexes
+;; to produce a list of target URLs"
+;;   [sitemap-url]
+;;   (go (->> sitemap-url          
+;;            http-get
+;;            <!
+;;           (sitemap-handler sitemap-url))))
 
 
 (defn crawl
@@ -150,9 +148,5 @@ to produce a list of target URLs"
   (let [robots-txt (get-robots-txt url)
         robots (irobot.core/robots (<!! robots-txt))]
 
-    (if (crawl? url robots {} url)
-      (go (->> url
-               http-get
-               <!
-               (response-handler robots body-parser url))))
+    (do-get robots body-parser url)
     "Crawl started"))

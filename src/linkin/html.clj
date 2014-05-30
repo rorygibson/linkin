@@ -16,9 +16,7 @@
           doc (doto doc (.setBaseUri base-uri))
           anchors (.select doc "a")]
       (map (fn [^org.jsoup.nodes.Node a] (.attr a "abs:href")) anchors))
-    (do
-      (debug "[extract-anchors] not a parseable content type:" content-type)
-      [])))
+    []))
 
 
 

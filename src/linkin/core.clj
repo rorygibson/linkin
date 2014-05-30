@@ -74,11 +74,9 @@
 
 (defn consume
   "Take in URL, content-type and body. Package & enqueue on a channel for processing."
-  [consumer {:keys [opts headers body] :as resp}]
-  (let [content-type (:content-type headers)
-        url (:url opts)]
-    (go
-     (>! consumer {:url url :content-type content-type :body body}))))
+  [consumer {{url :url} :opts {content-type :content-type} :headers body :body}]
+  (go
+   (>! consumer {:url url :content-type content-type :body body})))
 
 
 (declare response-handler)
@@ -96,10 +94,9 @@
 
 (defn response-handler
   "Taking in an HTTP response, extract anchors from the body, kick off fetches on those URLs, then consume the body (enqueue the body for further processing)"
-  [robots body-consumer {:keys [headers opts body] :as resp}]
-  (let [content-type (:content-type headers)
-        url (:url opts)
-        urls (extract-anchors body content-type url)]
+  [robots body-consumer {{url :url} :opts {content-type :content-type} :headers body :body :as resp}]
+  
+  (let [urls (extract-anchors body content-type url)]
 
     (debug "[response-handler] got [" url "] of type [" content-type "] containing " (count urls) "URLs")
     

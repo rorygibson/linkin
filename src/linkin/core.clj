@@ -1,15 +1,15 @@
 (ns linkin.core
-  (:require [irobot.core]
+  (:require [clojure.core.async :refer [go put! chan <!! <! >! dropping-buffer]]
+            [irobot.core]
             [linkin.urls :refer :all]
             [linkin.html :refer :all]
-            [linkin.parsers :refer :all] 
+            [linkin.parsers :refer :all]
+            [linkin.http :refer :all]
             [mundi.core :refer :all]
             [org.httpkit.client :as http]
             [clojure.tools.logging :refer [debug info error warn trace]]))
 
 
-
-(def USER_AGENT "linkin 0.1.0")
 
 
 (defn initial-state
@@ -80,41 +80,27 @@
 
 
 
-(defn crawl?
-  "We should only crawl a URL if it's local and we haven't already crawled it (or a similar URL)"
-  [^String url robots already-crawled ^String base-url]
-
-  (let [relative-url (relativize-url url)
-        allowed (irobot.core/allows? robots USER_AGENT relative-url)
-        done (already-crawled? url already-crawled)
-        local (local? url base-url)]
-    (and (not done) local allowed)))
-
-
 (defn response-handler
   "Called as a callback by the HTTP-Kit fetcher.
    Obtains and enqueues for processing the anchors and body text from the response"
   [robots body-parser ^String url {:keys [status headers body error opts] :as resp}]
+  (let [content-type (:content-type headers)
+        anchors (extract-anchors body content-type url)]
+    (mark-as-crawled url)
+    (debug "[response-handler] got [" url "] of type [" content-type "] containing " (count anchors) "URLs")
+    
+    (doseq [link anchors]      
+      (if (crawl? link robots (crawled-urls) (base-url))
+        (send (link-agent) (fn [_] (http/get link (partial response-handler robots body-parser link))))))
 
-  (if (crawl? url robots (crawled-urls) (base-url))
-
-    (let [content-type (:content-type headers)
-          anchors (extract-anchors body content-type url)]
-      (mark-as-crawled url)
-      (trace "[response-handler] got" url content-type)
-        
-      (doseq [link anchors]      
-        (if (crawl? link robots (crawled-urls) (base-url))
-          (send (link-agent) (fn [_] (http/get link (partial response-handler robots body-parser link))))))
-
-      (send (handler-agent) (fn [_] (body-parser url content-type body))))))
+    (send (handler-agent) (fn [_] (body-parser url content-type body)))))
 
 
 (defn get-robots-txt
   [base-url]
   (let [url (str base-url "/robots.txt")]
     (info "[get-robots-txt] Requesting robots rules from" url)
-    (:body @(http/get url))))
+    (go (:body (<! (http-get url))))))
 
 
 (defn sitemap-handler
@@ -148,7 +134,10 @@
   "Starting from a base sitemap.xml URL, locate and parse all sitemaps and sitemapindexes
 to produce a list of target URLs"
   [sitemap-url]
-  (http/get sitemap-url {} (partial sitemap-handler sitemap-url)))
+  (go (->> sitemap-url          
+           http-get
+           <!
+          (sitemap-handler sitemap-url))))
 
 
 (defn crawl
@@ -159,9 +148,11 @@ to produce a list of target URLs"
   (info "[crawl] Starting crawl of" (base-url))
 
   (let [robots-txt (get-robots-txt url)
-        robots (irobot.core/robots robots-txt)]
-        
-    (if (crawl? url robots (crawled-urls) url)
-      (http/get url {} (partial response-handler robots body-parser url))
-      "Not crawling - base URL not allowed")
+        robots (irobot.core/robots (<!! robots-txt))]
+
+    (if (crawl? url robots {} url)
+      (go (->> url
+               http-get
+               <!
+               (response-handler robots body-parser url))))
     "Crawl started"))

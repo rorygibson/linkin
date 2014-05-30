@@ -20,37 +20,24 @@
   ([_] (initial-state)))
 
 
-(def application (atom (initial-state)))
 
 
-(defn reset-application!
-  "Return to starting state"
-  []
-  (swap! application initial-state))
+;; (defn urls-from-sitemaps
+;;   "List out URLs retrieved from a sitemap crawl"
+;;   []
+;;   (:urls-from-sitemaps @application))
 
 
-(defn crawled-urls
-  "List out URLs crawled so far (since last reset-application!)"
-  []
-  (:crawled-urls @application))
 
-
-(defn urls-from-sitemaps
-  "List out URLs retrieved from a sitemap crawl"
-  []
-  (:urls-from-sitemaps @application))
-
+;; (defn record-url-from-sitemap
+;;   [url]
+;;   (swap! application (fn [app] (assoc app :urls-from-sitemaps (conj (:urls-from-sitemaps app) url)))))
 
 
 (defn mark-as-crawled
   "Indicates that we have already crawled a specific URL"
-  [url]
-  (swap! application (fn [app] (assoc app :crawled-urls (conj (:crawled-urls app) url)))))
-
-
-(defn record-url-from-sitemap
-  [url]
-  (swap! application (fn [app] (assoc app :urls-from-sitemaps (conj (:urls-from-sitemaps app) url)))))
+  [memory url]
+  (swap! memory (fn [mem] (assoc mem :crawled-urls (conj (:crawled-urls mem) url)))))
 
 
 (defn get-robots-txt
@@ -73,25 +60,25 @@
 
 (defn do-get
   "If we should fetch a resource, asynchronously retrieve and pass it to response-handler, and mark it as having been crawled"
-  [robots body-consumer base-url url]
-  (if (crawl? url robots (crawled-urls) base-url)    
-    (do (mark-as-crawled url)    
+  [mem robots body-consumer base-url url]
+  (if (crawl? url robots (:crawled-urls @mem) base-url)    
+    (do (mark-as-crawled mem url)    
         (go (->> url
                  http-get
                  <!
-                 (response-handler robots body-consumer base-url))))))
+                 (response-handler mem robots body-consumer base-url))))))
 
 
 (defn response-handler
   "Taking in an HTTP response, extract anchors from the body, kick off fetches on those URLs, then consume the body (enqueue the body for further processing)"
-  [robots body-consumer base-url {{url :url} :opts {content-type :content-type} :headers body :body :as resp}]
+  [mem robots body-consumer base-url {{url :url} :opts {content-type :content-type} :headers body :body :as resp}]
   
   (let [urls (extract-anchors body content-type url)]
 
     (debug "[response-handler] got [" url "] of type [" content-type "] containing " (count urls) "URLs")
     
     (doseq [u urls]
-      (do-get robots body-consumer base-url u))
+      (do-get mem robots body-consumer base-url u))
 
     (consume body-consumer resp)))
 
@@ -160,7 +147,8 @@ Assumes that the channel will contain messages, each of which is a map of those 
 
   (let [robots-txt (get-robots-txt base-url)
         robots (irobot.core/robots (<!! robots-txt))
-        body-consumer (make-body-consumer body-parser)]
+        body-consumer (make-body-consumer body-parser)
+        memory (atom (initial-state))]
 
-    (do-get robots body-consumer base-url base-url)
-    "Crawl started"))
+    (do-get memory robots body-consumer base-url base-url)
+    memory))

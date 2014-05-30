@@ -91,13 +91,14 @@
     (go (->> url
              http-get
              <!
-             (response-handler robots body-consumer url)))))
+             (response-handler robots body-consumer)))))
 
 
 (defn response-handler
   "Taking in an HTTP response, extract anchors from the body, kick off fetches on those URLs, then consume the body (enqueue the body for further processing)"
-  [robots body-consumer ^String url {:keys [headers body] :as resp}]
+  [robots body-consumer {:keys [headers opts body] :as resp}]
   (let [content-type (:content-type headers)
+        url (:url opts)
         urls (extract-anchors body content-type url)]
 
     (debug "[response-handler] got [" url "] of type [" content-type "] containing " (count urls) "URLs")

@@ -12,17 +12,17 @@
 
 
 
-(defn initial-state
-  "Define initial state var"
+(defn create-memory
+  "Create a data structure for a crawl"
   ([]
      { :crawled-urls #{}
       :urls-from-sitemaps #{}})
-  ([_] (initial-state)))
+  ([_] (create-memory)))
 
 
 (defn record-url-from-sitemap
   "Record a located sitemap file"
-  [url]
+  [memory url]
   (swap! memory
          (fn [mem] (assoc mem :urls-from-sitemaps (conj (:urls-from-sitemaps mem) url)))))
 
@@ -134,7 +134,7 @@ Assumes that the channel will contain messages, each of which is a map of those 
   (let [robots-txt (get-robots-txt base-url)
         robots (irobot.core/robots (<!! robots-txt))
         body-consumer (make-body-consumer body-parser)
-        memory (atom (initial-state))
+        memory (atom (create-memory))
         pred #(crawl? %1 robots memory base-url)
         handler (partial response-handler memory pred body-consumer)] ;; requires URL as param
 

@@ -49,65 +49,6 @@
    (>! consumer {:url url :content-type content-type :body body})))
 
 
-(declare response-handler)
-
-
-(defn do-get
-  [mem pred handler url]
-  (if (pred url)
-    (do
-      (mark-as-crawled mem url)
-      (go (->> url
-               http-get
-               <!
-               handler)))))
-
-
-
-(defn response-handler
-  "Taking in an HTTP response, extract anchors from the body, kick off fetches on those URLs, then consume the body (enqueue the body for further processing)"
-  [mem pred body-consumer {{url :url} :opts {content-type :content-type} :headers body :body :as resp}]
-  
-  (let [urls (extract-anchors body content-type url)
-        handler (partial response-handler mem pred body-consumer)]
-    (debug "[response-handler] got [" url "] of type [" content-type "] containing " (count urls) "URLs")
-    
-    (doseq [u urls]
-      (do-get mem pred handler u))
-
-    (consume body-consumer resp)))
-
-
-;; (defn sitemap-handler
-;;   ""
-;;   [mem body sitemap-consumer]
-
-;;   (let [locs (find-sitemaps body)
-;;         found (find-urls body)]
-;;     (debug "[sitemap-handler] got" (count locs) "sitemap locs")
-
-;;     (if (and body (sitemap-index? body))
-;;       (doseq [l locs]
-;;         (debug "[sitemap-handler] processing" l)
-;;                                         ;(do-sitemap-get sitemap-consumer l)
-;;         )
-
-;;       (do
-;;         (debug "[sitemap-handler] got" (count found) "URLs")      
-;;         (doall (map record-url-from-sitemap mem found))      
-;;         (debug "[sitemap-handler] total count is" (count (urls-from-sitemaps)))))))
-
-
-;; (defn crawl-sitemaps
-;;   "Starting from a base sitemap.xml URL, locate and parse all sitemaps and sitemapindexes
-;; to produce a list of target URLs"
-;;   [sitemap-url]
-;;   (go (->> sitemap-url          
-;;            http-get
-;;            <!
-;;           (sitemap-handler sitemap-url))))
-
-
 (defn make-body-consumer
   "Sets up a channel, and binds a body-parsing function to it.
 Assumes that the body-parser takes a URL, content-type and body (all Strings).
@@ -123,6 +64,57 @@ Assumes that the channel will contain messages, each of which is a map of those 
               (recur)))))
     c))
 
+
+(defn do-get
+  "If (pred url) is true, asynchronously fetch the contents of URL an pas it to handler."
+  [pred handler url]
+  (if (pred url)
+    (go (->> url
+             http-get
+             <!
+             handler))))
+
+
+(defn response-handler
+  "Taking in an HTTP response, extract anchors from the body, kick off fetches on those URLs, then consume the body (enqueue the body for further processing)"
+  [mem pred body-consumer {{url :url} :opts {content-type :content-type} :headers body :body :as resp}]
+  
+  (let [urls (extract-anchors body content-type url)
+        handler (partial response-handler mem pred body-consumer)]
+    (debug "[response-handler] got [" url "] of type [" content-type "] containing " (count urls) "URLs")
+    
+    (doseq [u urls]
+      (do-get pred handler u)
+      (mark-as-crawled mem u))
+
+    (consume body-consumer resp)))
+
+
+(defn sitemap-handler
+  "Given an HTTP response containing a sitemap.xml, prase it, and recur through all sub-sitemaps,
+   building up the list of URLs in the memory"
+  [mem {{url :url} :opts {content-type :content-type} :headers body :body :as resp}]
+  (let [sitemap-locs (find-sitemaps body)
+        page-locs (find-urls body)]
+    (debug "[sitemap-handler] got" (count sitemap-locs) "sitemap locs and" (count page-locs) "page locs")
+
+    (if (and body (sitemap-index? body))
+      (doseq [l sitemap-locs]
+        (debug "[sitemap-handler] processing" l)
+        (do-get (fn [_] true) (partial sitemap-handler mem) (:loc l)))
+
+      (doseq [l page-locs]
+        (record-url-from-sitemap mem l)))))
+
+
+(defn crawl-sitemaps
+  "Starting from a base sitemap.xml URL, locate and parse all sitemaps and sitemapindexes
+to produce a list of target URLs"
+  [mem url]
+  (let [handler (partial sitemap-handler mem)
+        pred (fn [_] true)]    
+    (do-get pred handler url))
+  mem)
 
 
 (defn crawl
@@ -145,5 +137,5 @@ Assumes that the channel will contain messages, each of which is a map of those 
     ;; if it's a sitemapindex, recurse this algorithm
     ;; if it's a sitemap, add the locs to state
 
-    (do-get memory pred handler base-url)
+    (do-get pred handler base-url)
     memory))

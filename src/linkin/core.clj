@@ -20,24 +20,18 @@
   ([_] (initial-state)))
 
 
-
-
-;; (defn urls-from-sitemaps
-;;   "List out URLs retrieved from a sitemap crawl"
-;;   []
-;;   (:urls-from-sitemaps @application))
-
-
-
-;; (defn record-url-from-sitemap
-;;   [url]
-;;   (swap! application (fn [app] (assoc app :urls-from-sitemaps (conj (:urls-from-sitemaps app) url)))))
+(defn record-url-from-sitemap
+  "Record a located sitemap file"
+  [url]
+  (swap! memory
+         (fn [mem] (assoc mem :urls-from-sitemaps (conj (:urls-from-sitemaps mem) url)))))
 
 
 (defn mark-as-crawled
   "Indicates that we have already crawled a specific URL"
   [memory url]
-  (swap! memory (fn [mem] (assoc mem :crawled-urls (conj (:crawled-urls mem) url)))))
+  (swap! memory
+         (fn [mem] (assoc mem :crawled-urls (conj (:crawled-urls mem) url)))))
 
 
 (defn get-robots-txt

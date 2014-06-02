@@ -59,58 +59,49 @@
 
 
 (defn do-get
-  "If we should fetch a resource, asynchronously retrieve and pass it to response-handler, and mark it as having been crawled"
-  [mem robots body-consumer base-url url]
-  (if (crawl? url robots (:crawled-urls @mem) base-url)    
-    (do (mark-as-crawled mem url)    
-        (go (->> url
-                 http-get
-                 <!
-                 (response-handler mem robots body-consumer base-url))))))
+  [mem pred handler url]
+  (if (pred url)
+    (do
+      (mark-as-crawled mem url)
+      (go (->> url
+               http-get
+               <!
+               handler)))))
+
 
 
 (defn response-handler
   "Taking in an HTTP response, extract anchors from the body, kick off fetches on those URLs, then consume the body (enqueue the body for further processing)"
-  [mem robots body-consumer base-url {{url :url} :opts {content-type :content-type} :headers body :body :as resp}]
+  [mem pred body-consumer {{url :url} :opts {content-type :content-type} :headers body :body :as resp}]
   
-  (let [urls (extract-anchors body content-type url)]
-
+  (let [urls (extract-anchors body content-type url)
+        handler (partial response-handler mem pred body-consumer)]
     (debug "[response-handler] got [" url "] of type [" content-type "] containing " (count urls) "URLs")
     
     (doseq [u urls]
-      (do-get mem robots body-consumer base-url u))
+      (do-get mem pred handler u))
 
     (consume body-consumer resp)))
 
 
-
-
-
 ;; (defn sitemap-handler
-;;   "Request handler for responses to sitemap requests"
-;;   [^String url {:keys [status headers body error opts] :as resp}]
-;;   (mark-as-crawled url)
+;;   ""
+;;   [mem body sitemap-consumer]
 
-;;   (debug "[sitemap-handler] got" url)
+;;   (let [locs (find-sitemaps body)
+;;         found (find-urls body)]
+;;     (debug "[sitemap-handler] got" (count locs) "sitemap locs")
 
-;;   (if (and body (sitemap-index? body))
-;;     (let [locs (find-sitemaps body)]
-;;       (debug "[sitemap-handler] got" (count locs) "sitemap locs")
+;;     (if (and body (sitemap-index? body))
+;;       (doseq [l locs]
+;;         (debug "[sitemap-handler] processing" l)
+;;                                         ;(do-sitemap-get sitemap-consumer l)
+;;         )
 
-;;       (doall
-;;        (map
-;;         (fn [l]
-;;           (debug "[sitemap-handler] processing" l)
-;;           (send (link-agent)
-;;                 (fn [_]
-;;                   (debug "[sitemap-handler] agent called with sitemap loc" l)
-;;                   (http/get (:loc l) (partial sitemap-handler (:loc l))))))
-;;         locs)))
-
-;;     (let [found (find-urls body)]
-;;       (debug "[sitemap-handler] got" (count found) "URLs")      
-;;       (doall (map record-url-from-sitemap found))      
-;;       (debug "[sitemap-handler] total count is" (count (urls-from-sitemaps))))))
+;;       (do
+;;         (debug "[sitemap-handler] got" (count found) "URLs")      
+;;         (doall (map record-url-from-sitemap mem found))      
+;;         (debug "[sitemap-handler] total count is" (count (urls-from-sitemaps)))))))
 
 
 ;; (defn crawl-sitemaps
@@ -139,6 +130,7 @@ Assumes that the channel will contain messages, each of which is a map of those 
     c))
 
 
+
 (defn crawl
   "Start crawling at the given base URL"
   [^String base-url body-parser]
@@ -148,7 +140,16 @@ Assumes that the channel will contain messages, each of which is a map of those 
   (let [robots-txt (get-robots-txt base-url)
         robots (irobot.core/robots (<!! robots-txt))
         body-consumer (make-body-consumer body-parser)
-        memory (atom (initial-state))]
+        memory (atom (initial-state))
+        pred #(crawl? %1 robots memory base-url)
+        handler (partial response-handler memory pred body-consumer)] ;; requires URL as param
 
-    (do-get memory robots body-consumer base-url base-url)
+    ;; TODO
+    ;; get seq of any sitemaps from the robots.txt
+    ;; for each, kick off a go block to fetch it and process the
+    ;;   contents
+    ;; if it's a sitemapindex, recurse this algorithm
+    ;; if it's a sitemap, add the locs to state
+
+    (do-get memory pred handler base-url)
     memory))

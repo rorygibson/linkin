@@ -6,8 +6,6 @@
             [clojure.tools.logging :refer [debug info error warn trace]]))
 
 
-
-
 (def USER_AGENT "linkin 0.1.0")
 
 
@@ -23,13 +21,12 @@
 
 (defn crawl?
   "We should only crawl a URL if it's local and we haven't already crawled it (or a similar URL)"
-  [^String url robots already-crawled ^String base-url]
+  [^String url robots memory ^String base-url]
 
-  (let [relatived-url (urls/relativize-url url)
+  (let [already-crawled (:crawled-urls @memory)
+        relatived-url (urls/relativize-url url)
         allowed (irobot.core/allows? robots USER_AGENT relatived-url)
         done (urls/already-crawled? url already-crawled)
-        local (urls/local? url base-url)
-        result (and (not done) local allowed)]
-;;    (debug "[crawl?]" url (not done) local allowed "-->"  result)
-    result))
+        local (urls/local? url base-url)]
+    (and (not done) local allowed)))
 

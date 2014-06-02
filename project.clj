@@ -8,6 +8,8 @@
   
   :main linkin.core
 
+  :jvm-opts ["-Xms500m" "-Xmx500m" "-server"] 
+
   :dependencies [[org.clojure/clojure "1.6.0"]
                  [org.clojure/core.async "0.1.303.0-886421-alpha"]
                  [http-kit "2.1.18"]

@@ -11,3 +11,11 @@
   (if (= content-type TEXT-HTML)
     (debug "[simple-body-parser] got [" url "] of type [" content-type "] with " (count body) " bytes data")))
 
+
+
+(defn saving-body-parser
+  ""
+  [^String url ^String content-type body]
+  (let [fname (str "/tmp/linkin/" (clojure.string/join "-" (drop 2 (clojure.string/split url #"/"))))]
+    (debug "[saving-body-parser] writing to" fname)
+    (spit fname body)))

@@ -22,7 +22,6 @@
 (defn crawl?
   "We should only crawl a URL if it's local and we haven't already crawled it (or a similar URL)"
   [^String url robots memory ^String base-url]
-
   (let [already-crawled (:crawled-urls @memory)
         relatived-url (urls/relativize-url url)
         allowed (irobot.core/allows? robots USER_AGENT relatived-url)

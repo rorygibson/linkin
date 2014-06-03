@@ -1,4 +1,5 @@
 (ns linkin.core
+  (:gen-class)
   (:require [clojure.core.async :refer [go put! chan <!! <! >! >!! buffer thread]]
             [irobot.core]
             [linkin.urls :refer :all]
@@ -126,3 +127,11 @@ Assumes that the channel will contain messages, each of which is a map of those 
       (do-get response-handler base-url))
     
     memory))
+
+
+
+(defn -main
+  "Run the crawler from the command line"
+  [& args]
+  (crawl (first args) linkin.parsers/saving-body-parser)
+  (loop [] (recur)))

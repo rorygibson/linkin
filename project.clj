@@ -5,6 +5,8 @@
   
   :license {:name "Eclipse Public License"
             :url "http://www.eclipse.org/legal/epl-v10.html"}
+
+  :min-lein-version "2.0.0"
   
   :main linkin.core
 
@@ -19,9 +21,10 @@
                  [log4j "1.2.17"]
                  [org.clojure/tools.logging "0.2.6"]]
 
-  :profiles { :dev
-              {
-               :dependencies [[midje "1.6.3"]]
-               :plugins      [[lein-ancient "0.5.4" :exclusions [org.clojure/clojure commons-codec org.clojure/data.xml]]
-                              [lein-midje "3.1.1"]]}
-              })
+  :profiles { :dev {
+                    :dependencies [[midje "1.6.3"]]
+                    :plugins      [[lein-midje "3.1.1"]]
+               }
+             :uberjar {
+                       :aot :all}
+             })

@@ -7,12 +7,10 @@ A minimal, async Clojure web crawling library.
 and because links)
 
 ## Features
-+ Uses http-kit for async fetching
++ Uses http-kit and core.async for async fetching
 + Uses Jsoup to reliably extract links from scraped pages
 + Allows the user to pass in their own function to handle the body content of scraped pages
 + Respects the robots.txt of the target website (allow & disallow rules)
-
-
 
 
 ## Usage
@@ -40,8 +38,6 @@ Then:
 + Pass options through to http-kit (eg following redirects)
 + Filtering by content type
 + Stats while running
-+ Namespace state by run (currently shares state so can't run multiple instances alongside)
-+ Look at using a crawl set / queue instead of the link-agent - to prevent duplication of crawled pages
 + Better URL normalization (for detecting URLs we've seen before) - see http://en.wikipedia.org/wiki/URL_normalization
 
 

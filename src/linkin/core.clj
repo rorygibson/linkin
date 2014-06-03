@@ -10,8 +10,6 @@
             [clojure.tools.logging :refer [debug info error warn trace]]))
 
 
-
-
 (defn create-memory
   "Create a data structure for a crawl"
   ([]
@@ -104,7 +102,6 @@ Assumes that the channel will contain messages, each of which is a map of those 
       (doseq [l page-locs]
         (do-get (partial sitemap-handler mem) (:loc l))
         (record-url-from-sitemap mem l)))))
-
 
 
 (defn crawl

@@ -4,6 +4,7 @@
 
 
 (def ^{:private true} TEXT-HTML "text/html")
+(def ^{:private true} TEMP-DIR "/tmp/linkin")
 
 
 (defn simple-body-parser
@@ -13,11 +14,10 @@
     (debug "[simple-body-parser] got [" url "] of type [" content-type "] with " (count body) " bytes data")))
 
 
-
 (defn saving-body-parser
-  ""
+  "Writes body data as a file"
   [^String url ^String content-type body]
-  (let [fname (str "/tmp/linkin/" (clojure.string/join "-" (drop 2 (clojure.string/split url #"/"))))]
+  (let [fname (str TEMP-DIR (clojure.string/join "-" (drop 2 (clojure.string/split url #"/"))))]
     (debug "[saving-body-parser] writing to" fname)
     (try
       (with-open [wrtr (writer fname)]

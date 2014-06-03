@@ -9,10 +9,18 @@
     (set (cons u opts))))
 
 
+(defn trim-hash-portion
+  "Remove the portion of a URL after any #"
+  [url]
+  (if url
+    (first (clojure.string/split url #"#"))
+    ""))
+
+
 (defn already-crawled?
   "Check if we have already crawled this URL or a similar URL (<url> + '#') within the Set of urls"
   [^String url crawled-urls]
-  (let [similar-urlset (similar-urls url)]
+  (let [similar-urlset (similar-urls (trim-hash-portion url))]
     (some similar-urlset crawled-urls)))
  
 

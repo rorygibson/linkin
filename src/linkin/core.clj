@@ -117,7 +117,7 @@ Assumes that the channel will contain messages, each of which is a map of those 
         memory (atom (create-memory))
         pred #(crawl? %1 robots memory base-url)
         response-handler (partial response-handler memory pred body-consumer)
-        sitemap-handler (partial sitemap-handler mem)] ;; requires URL as param
+        sitemap-handler (partial sitemap-handler memory)] ;; requires URL as param
 
     (doseq [m sitemaps]
       (do-get sitemap-handler (:loc m)))

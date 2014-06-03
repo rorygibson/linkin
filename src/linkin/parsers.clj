@@ -4,7 +4,7 @@
 
 
 (def ^{:private true} TEXT-HTML "text/html")
-(def ^{:private true} TEMP-DIR "/tmp/linkin")
+(def ^{:private true} TEMP-DIR "/tmp/linkin/")
 
 
 (defn simple-body-parser

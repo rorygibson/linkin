@@ -3,8 +3,14 @@
   (:require [linkin.html :refer :all]))
 
 
+(def TEXT-HTML "text/html")
+
+
 (def single-absolute-anchor "<html><body><a href=\"http://domain/foo.html\">foo</a></body></html>")
+
+
 (def single-relative-anchor "<html><body><a href=\"/foo.html\">foo</a></body></html>")
+
 
 (def multiple-relative-anchors
   "<html><body><a href=\"/foo.html\">foo</a><a href=\"/bar.html\">bar</a></body></html>")

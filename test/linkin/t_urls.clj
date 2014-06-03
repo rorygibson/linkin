@@ -40,6 +40,21 @@
     (relativize-url "http://foo/bar/index.html") => "/bar/index.html"))
 
 
+(facts "about URL trimming"
+  (fact "Removes a simple hash portion"
+    (trim-hash-portion "http://foo.com/bar.html#xyz") => "http://foo.com/bar.html")
+
+  (fact "Removes an empty hash portion"
+    (trim-hash-portion "http://foo.com/bar.html#") => "http://foo.com/bar.html")
+
+  (fact "Removes a complex hash portion"
+    (trim-hash-portion "http://foo.com/bar.html#xyz?foo=bar&123") => "http://foo.com/bar.html")
+
+  (fact "behaves with nil and empty strings"
+    (trim-hash-portion "") => ""
+    (trim-hash-portion nil) => ""))
+
+
 (facts "about similar-urls"
   (fact "contains the original URL"
     (similar-urls "http://foo") => (contains "http://foo"))

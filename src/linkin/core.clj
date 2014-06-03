@@ -83,37 +83,28 @@ Assumes that the channel will contain messages, each of which is a map of those 
 
     (doseq [u target-urls]
       (trace "[response-handler] target URL [" u "]")
-      (do-get handler u)
+      (if (pred u) (do-get handler u))
       (mark-as-crawled mem u))))
 
 
 (defn sitemap-handler
   "Given an HTTP response containing a sitemap.xml, prase it, and recur through all sub-sitemaps,
    building up the list of URLs in the memory"
-  [process mem {{url :url} :opts {content-type :content-type} :headers body :body :as resp}]
+  [mem {{url :url} :opts {content-type :content-type} :headers body :body :as resp}]
   (let [sitemap-locs (find-sitemaps body)
         page-locs (find-urls body)]
     (debug "[sitemap-handler] got" (count sitemap-locs) "sitemap locs and" (count page-locs) "page locs")
 
     (if (and body (sitemap-index? body))
       (doseq [l sitemap-locs]
-        (debug "[sitemap-handler] processing" l)
-        (process l)
-
+        (debug "[sitemap-handler] fetching" l)
         ;; TODO always?
-        (do-get (partial sitemap-handler process mem) (:loc l)))
+        (do-get (partial sitemap-handler mem) (:loc l)))
 
       (doseq [l page-locs]
+        (do-get (partial sitemap-handler mem) (:loc l))
         (record-url-from-sitemap mem l)))))
 
-
-(defn crawl-sitemaps
-  "Starting from a base sitemap.xml URL, locate and parse all sitemaps and sitemapindexes
-to produce a list of target URLs"
-  [mem action url]
-  (let [handler (partial sitemap-handler action mem)]    
-    (do-get handler url))
-  mem)
 
 
 (defn crawl
@@ -128,12 +119,13 @@ to produce a list of target URLs"
         body-consumer (make-body-consumer body-parser)
         memory (atom (create-memory))
         pred #(crawl? %1 robots memory base-url)
-        handler (partial response-handler memory pred body-consumer)] ;; requires URL as param
+        response-handler (partial response-handler memory pred body-consumer)
+        sitemap-handler (partial sitemap-handler mem)] ;; requires URL as param
 
     (doseq [m sitemaps]
-      (crawl-sitemaps memory #(debug %) m))
+      (do-get sitemap-handler (:loc m)))
 
     (if (pred base-url)
-      (do-get handler base-url))
+      (do-get response-handler base-url))
     
     memory))

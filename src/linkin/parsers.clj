@@ -1,5 +1,6 @@
 (ns linkin.parsers
-  (:require [clojure.tools.logging :refer [debug info error warn trace]]))
+  (:require [clojure.java.io :refer :all]
+            [clojure.tools.logging :refer [debug info error warn trace]]))
 
 
 (def ^{:private true} TEXT-HTML "text/html")
@@ -18,4 +19,8 @@
   [^String url ^String content-type body]
   (let [fname (str "/tmp/linkin/" (clojure.string/join "-" (drop 2 (clojure.string/split url #"/"))))]
     (debug "[saving-body-parser] writing to" fname)
-    (spit fname body)))
+    (try
+      (with-open [wrtr (writer fname)]
+        (.write wrtr body))
+      (catch Exception e
+        (error e)))))

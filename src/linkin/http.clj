@@ -10,13 +10,11 @@
 
 
 (defn http-get
-  "Use http-kit to fetch a resource asynchronously, and stuff the result into a channel. Return the channel."
-  [url]
-  (let [c (chan)]
-    (trace "[http-get]" url)
-    (http/get url
-              (fn [r] (put! c r)))
-    c))
+  "Use http-kit to fetch a resource asynchronously, and stuff the result into a channel."
+  [channel url]
+  (debug "[http-get]" url channel)
+  (http/get url
+            (fn [r] (put! channel r))))
 
 
 (defn crawl?

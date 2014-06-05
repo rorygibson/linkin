@@ -14,7 +14,9 @@
 (defn create-memory
   "Create a data structure for a crawl"
   ([]
-     { :crawled-urls #{}
+     {:sitemap-channel (chan (buffer 1000))
+      :response-channel (chan (buffer 1000))
+      :crawled-urls #{}
       :urls-from-sitemaps #{}})
   ([_] (create-memory)))
 
@@ -36,54 +38,42 @@
 (defn get-robots-txt
   "Return the content of the robots.txt for a given base URL"
   [base-url]
-  (let [url (str base-url "/robots.txt")]
+  (let [url (str base-url "/robots.txt")
+        c (chan)]
     (info "[get-robots-txt] Requesting robots rules from" url)
-    (go (:body (<! (http-get url))))))
-
-
-(defn make-body-consumer
-  "Sets up a channel, and binds a body-parsing function to it.
-Assumes that the body-parser takes a URL, content-type and body (all Strings).
-Assumes that the channel will contain messages, each of which is a map of those 3 elements."
-  [body-parser]
-  (let [c (chan (buffer 1000))]
-    (go (loop []
-          (when-let [v (<! c)]
-            (trace "[body-consumer] processing body")
-            (let [body (:body v)
-                  url (:url v)
-                  content-type (:content-type v)]
-              (body-parser url content-type body)
-              (recur)))))
-    c))
-
-
-(defn do-get
-  "Asynchronously fetch the contents of URL an pas it to handler."
-  [handler url]
-  (go
-   (->> url
-        http-get
-        <!
-        handler)))
+    (http-get c url)
+    (:body (<!! c))))
 
 
 (defn response-handler
   "Taking in an HTTP response, extract anchors from the body, kick off fetches on those URLs, then consume the body (enqueue the body for further processing)"
-  [mem pred body-consumer {{url :url} :opts {content-type :content-type} :headers body :body :as resp}]
-  
+  [mem pred body-parser {{url :url} :opts {content-type :content-type} :headers body :body :as resp}]
+
+  (debug "[response-handler] handling" url)
   (let [urls (extract-anchors body content-type url)
-        handler (partial response-handler mem pred body-consumer)
         target-urls (filter pred urls)]
-    (debug "[response-handler] got [" url "] of type [" content-type "] containing" (count urls) "URLs, of which we want to crawl" (count target-urls))
     
-    (trace "[response-handler] enqueuing for body parsing")
-    (>!! body-consumer {:url url :content-type content-type :body body})
+    (debug "[response-handler] got [" url "] of type [" content-type "] containing" (count urls) "URLs, of which we want to crawl" (count target-urls))
+
+    (if (empty? content-type)
+      (debug "[response-handler] content-type empty; full response:" resp))
+    
+    (body-parser url content-type body)
 
     (doseq [u target-urls]
       (trace "[response-handler] target URL [" u "]")
-      (if (pred u) (do-get handler u))
+      (if (pred u)
+        (http-get (:response-channel @mem) u))
       (mark-as-crawled mem u))))
+
+
+(defn start-consumer
+  [channel handler]
+  (go (loop []
+        (when-let [v (<! channel)]
+          (trace "[consumer] processing body")
+          (handler v)
+          (recur)))))
 
 
 (defn sitemap-handler
@@ -96,37 +86,46 @@ Assumes that the channel will contain messages, each of which is a map of those 
 
     (if (and body (sitemap-index? body))
       (doseq [l sitemap-locs]
-        (debug "[sitemap-handler] fetching" l)
-        ;; TODO always?
-        (do-get (partial sitemap-handler mem) (:loc l)))
+        (debug "[sitemap-handler] fetching further sitemap" l)
+        (http-get (:sitemap-channel @mem) (:loc l)))
 
       (doseq [l page-locs]
-        (do-get (partial sitemap-handler mem) (:loc l))
+        (debug "[sitemap-handler] found leaf URL" url)
+        (http-get (:response-channel @mem) (:loc l))
         (record-url-from-sitemap mem l)))))
 
 
 (defn crawl
   "Start crawling at the given base URL"
   [^String base-url body-parser]
-  
-  (info "[crawl] Starting crawl of" base-url)
 
   (let [robots-txt (get-robots-txt base-url)
-        robots (irobot.core/robots (<!! robots-txt))
+        robots-txt (if robots-txt robots-txt "")
+        robots (irobot.core/robots robots-txt)
         sitemaps (irobot.core/sitemaps robots)
-        body-consumer (make-body-consumer body-parser)
-        memory (atom (create-memory))
-        pred #(crawl? %1 robots memory base-url)
-        response-handler (partial response-handler memory pred body-consumer)
-        sitemap-handler (partial sitemap-handler memory)] ;; requires URL as param
+        sitemap-urls (map :loc sitemaps)
+        
+        mem (atom (create-memory))
+        pred #(crawl? %1 robots mem base-url)
+        
+        sitemap-handler (partial sitemap-handler mem)
+        response-handler (partial response-handler mem pred body-parser)]
 
-    (doseq [m sitemaps]
-      (do-get sitemap-handler (:loc m)))
-
-    (if (pred base-url)
-      (do-get response-handler base-url))
+    (info "[crawl] starting consumers")
     
-    memory))
+    (start-consumer (:response-channel @mem) response-handler)
+    (start-consumer (:sitemap-channel @mem) sitemap-handler)
+
+    (info "[crawl] fetching" (count sitemap-urls) "top level sitemaps")
+    (doseq [m sitemap-urls]
+      (if m
+        (http-get (:sitemap-channel @mem) m)))
+
+    (info "[crawl] Starting crawl of" base-url)
+    (if (pred base-url)
+      (http-get (:response-channel @mem) base-url))
+    
+    mem))
 
 
 

@@ -17,10 +17,11 @@
 (defn saving-body-parser
   "Writes body data as a file"
   [^String url ^String content-type body]
-  (let [fname (str TEMP-DIR (clojure.string/join "-" (drop 2 (clojure.string/split url #"/"))))]
-    (debug "[saving-body-parser] writing to" fname)
+  (let [body (if body body "")
+        fname (str TEMP-DIR (clojure.string/join "-" (drop 2 (clojure.string/split url #"/"))))]
+    (debug "[saving-body-parser] writing body to" fname)
     (try
       (with-open [wrtr (writer fname)]
         (.write wrtr body))
       (catch Exception e
-        (error e)))))
+        (error "[saving-body-parser] exception writing data to" fname e)))))

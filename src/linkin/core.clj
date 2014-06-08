@@ -57,7 +57,7 @@
 
     (if (empty? content-type)
       (debug "[response-handler] content-type empty; full response:" resp))
-    
+
     (body-parser url content-type body)
 
     (doseq [u target-urls]
@@ -133,4 +133,4 @@
   "Run the crawler from the command line"
   [& args]
   (crawl (first args) linkin.parsers/saving-body-parser)
-  (loop [] (recur)))
+  (loop [] (Thread/sleep 30000) (recur)))

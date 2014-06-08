@@ -21,7 +21,7 @@
   "Check if we have already crawled this URL or a similar URL (<url> + '#') within the Set of urls"
   [^String url crawled-urls]
   (let [similar-urlset (similar-urls (trim-hash-portion url))]
-    (some similar-urlset crawled-urls)))
+    (not (empty? (clojure.set/intersection similar-urlset crawled-urls)))))
  
 
 (defn relativize-url

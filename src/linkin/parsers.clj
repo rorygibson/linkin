@@ -19,7 +19,7 @@
   [^String url ^String content-type body]
   (let [body (if body body "")
         fname (str TEMP-DIR (clojure.string/join "-" (drop 2 (clojure.string/split url #"/"))))]
-    (debug "[saving-body-parser] writing body to" fname)
+    (trace "[saving-body-parser] writing body to" fname)
     (try
       (with-open [wrtr (writer fname)]
         (.write wrtr body))

@@ -11,7 +11,7 @@
 (defn http-get
   "Use http-kit to fetch a resource asynchronously, and stuff the result into a channel."
   [channel url]
-  (debug "[http-get]" url channel)
+  (debug "[http-get]" url)
   (http/get url (fn [r] (put! channel r))))
 
 

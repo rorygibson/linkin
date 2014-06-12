@@ -14,8 +14,8 @@
 (defn create-memory
   "Create a data structure for a crawl"
   ([]
-     {:sitemap-channel (chan (buffer 1000))
-      :response-channel (chan (buffer 1000))
+     {:sitemap-channel (chan (buffer 10))
+      :response-channel (chan (buffer 10))
       :crawled-urls #{}
       :urls-from-sitemaps #{}})
   ([_] (create-memory)))
@@ -53,18 +53,19 @@
   (let [urls (extract-anchors body content-type url)
         target-urls (filter pred urls)]
     
-    (debug "[response-handler] got [" url "] of type [" content-type "] containing" (count urls) "URLs, of which we want to crawl" (count target-urls))
+    (trace "[response-handler] got [" url "] of type [" content-type "] containing" (count urls) "URLs, of which we want to crawl" (count target-urls))
 
-    (if (empty? content-type)
-      (debug "[response-handler] content-type empty; full response:" resp))
+    (if (:error resp)
+      (warn "[response-handler] remote error getting" url (:error resp))
+      
+      (do
+        (body-parser url content-type body)
 
-    (body-parser url content-type body)
-
-    (doseq [u target-urls]
-      (trace "[response-handler] target URL [" u "]")
-      (if (pred u)
-        (http-get (:response-channel @mem) u))
-      (mark-as-crawled mem u))))
+        (doseq [u target-urls]
+          (trace "[response-handler] target URL [" u "]")
+          (if (pred u)
+            (http-get (:response-channel @mem) u))
+          (mark-as-crawled mem u))))))
 
 
 (defn start-consumer

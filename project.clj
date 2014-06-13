@@ -18,12 +18,14 @@
                  [irobot/irobot "0.1.1-SNAPSHOT"]
                  [mundi "0.1.0-SNAPSHOT"]
                  [org.jsoup/jsoup "1.7.3"]
-                 [log4j "1.2.17"]
-[clj-antlr "0.2.2"]
                  [org.clojure/tools.logging "0.2.6"]]
 
   :profiles { :dev {
-                    :dependencies [[midje "1.6.3"]]
+                    :dependencies [[midje "1.6.3"]
+                                   [log4j/log4j "1.2.17" :exclusions [javax.mail/mail
+                                                                      javax.jms/jms
+                                                                      com.sun.jdmk/jmxtools
+                                                                      com.sun.jmx/jmxri]]]
                     :plugins      [[lein-midje "3.1.1"]]
                }
              :uberjar {

@@ -19,6 +19,7 @@
                  [mundi "0.1.0-SNAPSHOT"]
                  [org.jsoup/jsoup "1.7.3"]
                  [log4j "1.2.17"]
+[clj-antlr "0.2.2"]
                  [org.clojure/tools.logging "0.2.6"]]
 
   :profiles { :dev {

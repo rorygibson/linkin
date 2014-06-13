@@ -85,21 +85,21 @@
     (already-crawled? "http://foo" nil) => falsey)
 
 
-  (fact "if we have a set containing only the precise url, we return the URL"
-    (already-crawled? "http://foo" #{"http://foo"}) => "http://foo")
+  (fact "if we have a set containing only the precise url, we return true"
+    (already-crawled? "http://foo" #{"http://foo"}) => true)
 
 
-  (fact "if we have a set of multiple URLs which contains the target url, we return the URL"
-    (already-crawled? "http://foo" #{"http://foo" "http://bar"}) => "http://foo")
+  (fact "if we have a set of multiple URLs which contains the target url, we return true"
+    (already-crawled? "http://foo" #{"http://foo" "http://bar"}) => true)
 
 
   (fact "if we have a set of multiple URLs which does not contain the target url, we return nil"
-    (already-crawled? "http://baz" #{"http://foo" "http://bar"}) => nil)
+    (already-crawled? "http://baz" #{"http://foo" "http://bar"}) => false)
 
 
   (fact "we return the URL if we have a URL in the set which is 'similar' to the target URL"
-    (already-crawled? "http://foo" #{"http://foo#" "http://bar"}) => "http://foo#"
-    (already-crawled? "http://foo" #{"http://foo/" "http://bar"}) => "http://foo/"
-    (already-crawled? "http://foo#" #{"http://foo" "http://bar"}) => "http://foo"
-    (already-crawled? "http://foo/" #{"http://foo" "http://bar"}) => "http://foo"
-    (already-crawled? "http://foo?" #{"http://foo" "http://bar"}) => "http://foo"))
+    (already-crawled? "http://foo" #{"http://foo#" "http://bar"}) => true
+    (already-crawled? "http://foo" #{"http://foo/" "http://bar"}) => true
+    (already-crawled? "http://foo#" #{"http://foo" "http://bar"}) => true
+    (already-crawled? "http://foo/" #{"http://foo" "http://bar"}) => true
+    (already-crawled? "http://foo?" #{"http://foo" "http://bar"}) => true))
